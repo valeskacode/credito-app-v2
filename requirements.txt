@@ -1,4 +1,10 @@
-
+streamlit
+pandas
+openpyxl
+python-docx
+reportlab
+pyarrow
+xlsxwriter
 # App Evaluación de Crédito (Streamlit Mobile First)
 
 ## Flujo
