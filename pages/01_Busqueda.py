@@ -1,189 +1,173 @@
 import streamlit as st
 import pandas as pd
 
-st.set_page_config(
-    page_title="Búsqueda y Carga",
-    layout="wide"
-)
 
-st.title("🔍 Búsqueda y Carga")
+def render():
 
-# --------------------------------------------------
-# ESTADO
-# --------------------------------------------------
+    st.subheader("🔍 Búsqueda de Cliente")
 
-if "df_clientes" not in st.session_state:
-    st.session_state.df_clientes = None
+    # -----------------------------
+    # Validar base cargada
+    # -----------------------------
 
-if "cliente_actual" not in st.session_state:
-    st.session_state.cliente_actual = None
+    if "df_clientes" not in st.session_state:
 
-# --------------------------------------------------
-# CARGAR EXCEL
-# --------------------------------------------------
+        st.warning(
+            "Primero debe cargar el Excel."
+        )
 
-@st.cache_data
-def cargar_excel(archivo):
-    df = pd.read_excel(
-        archivo,
-        sheet_name="MUESTRA_FINAL",
-        dtype=str
-    )
+        return
 
-    df.columns = [
-        str(c).strip().upper()
-        for c in df.columns
+    df = st.session_state.df_clientes
+
+    # -----------------------------
+    # Filtros
+    # -----------------------------
+
+    col1, col2 = st.columns([1, 3])
+
+    with col1:
+
+        criterio = st.selectbox(
+            "Buscar por",
+            [
+                "DOCPEN",
+                "CLIENTE",
+                "CODCLI",
+                "CODCRE"
+            ]
+        )
+
+    with col2:
+
+        valor = st.text_input(
+            "Ingrese búsqueda"
+        )
+
+    # -----------------------------
+    # Sin búsqueda
+    # -----------------------------
+
+    if not valor:
+
+        st.info(
+            "Ingrese un valor para buscar."
+        )
+
+        return
+
+    # -----------------------------
+    # Filtrar
+    # -----------------------------
+
+    resultado = df[
+        df[criterio]
+        .fillna("")
+        .astype(str)
+        .str.contains(
+            valor,
+            case=False,
+            na=False
+        )
     ]
 
-    return df
+    st.caption(
+        f"{len(resultado)} registro(s) encontrado(s)"
+    )
 
+    # -----------------------------
+    # Sin resultados
+    # -----------------------------
 
-archivo = st.file_uploader(
-    "Seleccione el archivo Excel",
-    type=["xlsx"]
-)
+    if resultado.empty:
 
-if archivo:
+        st.warning(
+            "No se encontraron coincidencias."
+        )
 
-    try:
+        return
 
-        df = cargar_excel(archivo)
+    # -----------------------------
+    # Resultados
+    # -----------------------------
 
-        st.session_state.df_clientes = df
+    for idx, row in resultado.head(30).iterrows():
+
+        with st.container(border=True):
+
+            st.markdown(
+                f"### {row.get('CLIENTE','')}"
+            )
+
+            c1, c2 = st.columns(2)
+
+            with c1:
+
+                st.write(
+                    f"**DNI:** {row.get('DOCPEN','')}"
+                )
+
+                st.write(
+                    f"**Cod Cliente:** {row.get('CODCLI','')}"
+                )
+
+                st.write(
+                    f"**Crédito:** {row.get('CODCRE','')}"
+                )
+
+            with c2:
+
+                st.write(
+                    f"**Agencia:** {row.get('AGENCIA','')}"
+                )
+
+                st.write(
+                    f"**Saldo:** {row.get('SALDO_MN','')}"
+                )
+
+                st.write(
+                    f"**Estado:** {row.get('ESTADO_CREDITO','')}"
+                )
+
+            if st.button(
+                "Seleccionar",
+                key=f"cliente_{idx}"
+            ):
+
+                st.session_state.cliente_actual = (
+                    row.to_dict()
+                )
+
+                st.success(
+                    "Cliente seleccionado."
+                )
+
+                st.rerun()
+
+    # -----------------------------
+    # Cliente activo
+    # -----------------------------
+
+    if st.session_state.get(
+        "cliente_actual"
+    ):
+
+        cliente = (
+            st.session_state
+            .cliente_actual
+        )
+
+        st.divider()
 
         st.success(
-            f"Base cargada correctamente ({len(df)} registros)"
+            f"Cliente activo: "
+            f"{cliente.get('CLIENTE','')}"
         )
-
-    except Exception as e:
-
-        st.error(
-            f"Error al leer la hoja MUESTRA_FINAL: {e}"
-        )
-
-# --------------------------------------------------
-# BUSCADOR
-# --------------------------------------------------
-
-if st.session_state.df_clientes is not None:
-
-    st.subheader("Buscar Cliente")
-
-    criterio = st.selectbox(
-        "Buscar por",
-        [
-            "DOCPEN",
-            "CLIENTE",
-            "CODCLI",
-            "CODCRE"
-        ]
-    )
-
-    valor = st.text_input(
-        "Ingrese valor de búsqueda"
-    )
-
-    if valor:
-
-        df = st.session_state.df_clientes
-
-        resultado = df[
-            df[criterio]
-            .fillna("")
-            .str.contains(
-                valor,
-                case=False,
-                na=False
-            )
-        ]
 
         st.write(
-            f"Coincidencias encontradas: {len(resultado)}"
+            f"DNI: {cliente.get('DOCPEN','')}"
         )
 
-        if len(resultado) > 0:
-
-            for idx, row in resultado.head(50).iterrows():
-
-                with st.container(border=True):
-
-                    st.markdown(
-                        f"### {row.get('CLIENTE','')}"
-                    )
-
-                    col1, col2 = st.columns(2)
-
-                    with col1:
-
-                        st.write(
-                            f"**DNI:** {row.get('DOCPEN','')}"
-                        )
-
-                        st.write(
-                            f"**Cod Cliente:** {row.get('CODCLI','')}"
-                        )
-
-                        st.write(
-                            f"**Crédito:** {row.get('CODCRE','')}"
-                        )
-
-                    with col2:
-
-                        st.write(
-                            f"**Agencia:** {row.get('AGENCIA','')}"
-                        )
-
-                        st.write(
-                            f"**Saldo:** {row.get('SALDO_MN','')}"
-                        )
-
-                        st.write(
-                            f"**Estado:** {row.get('ESTADO_CREDITO','')}"
-                        )
-
-                    if st.button(
-                        "Seleccionar",
-                        key=f"sel_{idx}"
-                    ):
-
-                        st.session_state.cliente_actual = (
-                            row.to_dict()
-                        )
-
-                        st.success(
-                            "Cliente seleccionado"
-                        )
-
-                        st.rerun()
-
-# --------------------------------------------------
-# CLIENTE SELECCIONADO
-# --------------------------------------------------
-
-if st.session_state.cliente_actual:
-
-    st.markdown("---")
-
-    st.subheader("Cliente Actual")
-
-    cliente = st.session_state.cliente_actual
-
-    st.write(
-        f"**Cliente:** {cliente.get('CLIENTE','')}"
-    )
-
-    st.write(
-        f"**DNI:** {cliente.get('DOCPEN','')}"
-    )
-
-    st.write(
-        f"**Código Cliente:** {cliente.get('CODCLI','')}"
-    )
-
-    st.write(
-        f"**Código Crédito:** {cliente.get('CODCRE','')}"
-    )
-
-    st.info(
-        "Ahora puede continuar a la pantalla de Evaluación de Crédito."
-    )
+        st.write(
+            f"Crédito: {cliente.get('CODCRE','')}"
+        )
