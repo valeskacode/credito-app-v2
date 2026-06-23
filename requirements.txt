@@ -1,44 +1,7 @@
-streamlit
-pandas
-openpyxl
-python-docx
-reportlab
-pyarrow
-xlsxwriter
-# App Evaluación de Crédito (Streamlit Mobile First)
-
-## Flujo
-1. Búsqueda y carga (Excel hoja MUESTRA_FINAL)
-2. Evaluación de crédito
-3. Ficha del cliente
-4. Ingresos y gastos
-5. Ubicación / visita
-6. Reporte (Word y PDF)
-
-## Características
-- Diseño mobile-first para celular.
-- Persistencia de avances por usuario.
-- Recuperación automática de evaluaciones incompletas.
-- Historial de generación de informes.
-- Lectura optimizada de hoja MUESTRA_FINAL.
-- Exportación DOCX y PDF.
-- Compatible con Streamlit Community Cloud o despliegue propio.
-
-## Estructura sugerida
-
-app.py
-pages/
-data/
-reports/
-storage/
-utils/
-
-## Persistencia
-- historial_evaluaciones.xlsx
-- borradores.parquet
-- logs_generacion.xlsx
-
-## Recomendaciones
-- Usar st.session_state
-- Cachear Excel con st.cache_data
-- Guardar avances cada cambio importante
+streamlit>=1.35.0
+pandas>=2.2.0
+openpyxl>=3.1.0
+python-docx>=1.1.0
+reportlab>=4.0.0
+pyarrow>=15.0.0
+xlsxwriter>=3.2.0
