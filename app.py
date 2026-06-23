@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import importlib.util
+import traceback
 from pathlib import Path
 
 # =====================================================
@@ -8,7 +9,7 @@ from pathlib import Path
 # =====================================================
 
 st.set_page_config(
-    page_title="Evaluación de Crédito",
+    page_title="Evaluación Crediticia",
     page_icon="🏦",
     layout="wide"
 )
@@ -30,7 +31,7 @@ if "usuario" not in st.session_state:
     st.session_state.usuario = ""
 
 # =====================================================
-# CARGA EXCEL
+# FUNCIONES
 # =====================================================
 
 @st.cache_data(show_spinner=False)
@@ -42,7 +43,7 @@ def cargar_excel(archivo):
         dtype=str
     )
 
-    # Limpieza columnas
+    # Limpiar nombres de columnas
     df.columns = (
         df.columns
         .astype(str)
@@ -52,24 +53,10 @@ def cargar_excel(archivo):
 
     return df
 
-# =====================================================
-# CARGA DE MÓDULOS
-# =====================================================
-
-BASE_DIR = Path(__file__).parent
-
-MODULOS = {
-    1: "pages/01_Busqueda.py",
-    2: "pages/02_Evaluacion_Credito.py",
-    3: "pages/03_Ficha_Cliente.py",
-    4: "pages/04_Ingresos_Gastos.py",
-    5: "pages/05_Ubicacion.py",
-    6: "pages/06_Reporte.py"
-}
 
 def cargar_modulo(ruta):
 
-    archivo = BASE_DIR / ruta
+    archivo = Path(ruta)
 
     spec = importlib.util.spec_from_file_location(
         archivo.stem,
@@ -83,7 +70,7 @@ def cargar_modulo(ruta):
     return modulo
 
 # =====================================================
-# HEADER
+# CABECERA
 # =====================================================
 
 st.title("🏦 Sistema de Evaluación Crediticia")
@@ -92,37 +79,39 @@ st.title("🏦 Sistema de Evaluación Crediticia")
 # USUARIO
 # =====================================================
 
-col1, col2 = st.columns([3, 1])
+with st.container(border=True):
 
-with col1:
+    col1, col2 = st.columns([3, 1])
 
-    usuario = st.text_input(
-        "Usuario",
-        value=st.session_state.usuario
-    )
+    with col1:
 
-with col2:
-
-    if st.button("Guardar Usuario"):
-
-        st.session_state.usuario = usuario
-
-        st.success(
-            f"Usuario registrado: {usuario}"
+        usuario = st.text_input(
+            "Usuario",
+            value=st.session_state.usuario
         )
+
+    with col2:
+
+        if st.button("Guardar Usuario"):
+
+            st.session_state.usuario = usuario
+
+            st.success(
+                f"Usuario registrado: {usuario}"
+            )
 
 # =====================================================
 # CARGA DE EXCEL
 # =====================================================
 
-st.markdown("## 📂 Base de Clientes")
+st.markdown("## 📂 Cargar Base de Clientes")
 
 archivo = st.file_uploader(
     "Seleccione archivo Excel",
     type=["xlsx"]
 )
 
-if archivo is not None:
+if archivo:
 
     try:
 
@@ -131,74 +120,114 @@ if archivo is not None:
         st.session_state.df_clientes = df
 
         st.success(
-            f"Excel cargado correctamente. Registros: {len(df):,}"
+            f"Base cargada correctamente: {len(df):,} registros"
         )
 
-        with st.expander("Ver columnas detectadas"):
+        # =====================================
+        # DIAGNÓSTICO DE COLUMNAS
+        # =====================================
 
-            st.write(df.columns.tolist())
+        with st.expander("🔍 Diagnóstico de Columnas"):
+
+            st.write(
+                "Columnas encontradas en MUESTRA_FINAL"
+            )
+
+            for i, col in enumerate(df.columns):
+
+                st.write(
+                    f"{i} -> {repr(col)}"
+                )
+
+        # Vista previa
+
+        with st.expander("📄 Vista previa"):
+
+            st.dataframe(
+                df.head(5),
+                use_container_width=True
+            )
 
     except Exception as e:
 
         st.error(
-            f"Error al cargar Excel: {e}"
+            f"Error al leer MUESTRA_FINAL: {e}"
         )
 
 # =====================================================
-# MENÚ
+# PASOS
 # =====================================================
+
+pasos = {
+    1: "🔍 Búsqueda",
+    2: "📊 Evaluación Crédito",
+    3: "👤 Ficha Cliente",
+    4: "💰 Ingresos y Gastos",
+    5: "📍 Ubicación",
+    6: "📄 Reporte"
+}
 
 st.markdown("---")
 
-pasos = {
-    1: "Búsqueda",
-    2: "Evaluación",
-    3: "Ficha Cliente",
-    4: "Ingresos y Gastos",
-    5: "Ubicación",
-    6: "Reporte"
-}
-
-st.progress(st.session_state.paso / 6)
+st.progress(
+    st.session_state.paso / 6
+)
 
 st.caption(
     f"Paso {st.session_state.paso} de 6 - "
     f"{pasos[st.session_state.paso]}"
 )
 
+# =====================================================
+# MENÚ
+# =====================================================
+
 c1, c2, c3, c4, c5, c6 = st.columns(6)
 
 with c1:
-    if st.button("🔍"):
+    if st.button("🔍 Buscar"):
         st.session_state.paso = 1
         st.rerun()
 
 with c2:
-    if st.button("📊"):
+    if st.button("📊 Crédito"):
         st.session_state.paso = 2
         st.rerun()
 
 with c3:
-    if st.button("👤"):
+    if st.button("👤 Cliente"):
         st.session_state.paso = 3
         st.rerun()
 
 with c4:
-    if st.button("💰"):
+    if st.button("💰 Ingresos"):
         st.session_state.paso = 4
         st.rerun()
 
 with c5:
-    if st.button("📍"):
+    if st.button("📍 Ubicación"):
         st.session_state.paso = 5
         st.rerun()
 
 with c6:
-    if st.button("📄"):
+    if st.button("📄 Reporte"):
         st.session_state.paso = 6
         st.rerun()
 
 st.markdown("---")
+
+# =====================================================
+# RUTAS
+# =====================================================
+
+modulos = {
+    1: "pages/01_Busqueda.py",
+    2: "pages/02_Evaluacion_Credito.py",
+    3: "pages/03_Ficha_Cliente.py",
+    4: "pages/04_Ingresos_Gastos.py",
+    5: "pages/05_Ubicacion.py",
+    6: "pages/06_Reporte.py"
+}
 
 # =====================================================
 # EJECUTAR MÓDULO
@@ -206,16 +235,22 @@ st.markdown("---")
 
 try:
 
-    modulo = cargar_modulo(
-        MODULOS[st.session_state.paso]
-    )
+    ruta = modulos[
+        st.session_state.paso
+    ]
+
+    modulo = cargar_modulo(ruta)
 
     modulo.render()
 
 except Exception as e:
 
     st.error(
-        f"Error cargando módulo: {e}"
+        f"Error cargando módulo: {str(e)}"
+    )
+
+    st.code(
+        traceback.format_exc()
     )
 
 # =====================================================
@@ -256,22 +291,33 @@ with b2:
 # CLIENTE ACTIVO
 # =====================================================
 
-if st.session_state.get("cliente_actual"):
+if st.session_state.get(
+    "cliente_actual"
+):
 
     cliente = st.session_state.cliente_actual
 
     st.sidebar.success(
-        cliente.get("CLIENTE", "")
+        "Cliente Seleccionado"
     )
 
     st.sidebar.write(
-        f"DNI: {cliente.get('DOCPEN','')}"
+        cliente.get(
+            "CLIENTE",
+            ""
+        )
+    )
+
+    if "DOCPEN" in cliente:
+
+        st.sidebar.write(
+            f"DNI: {cliente.get('DOCPEN','')}"
+        )
+
+    st.sidebar.write(
+        f"Cod Cliente: {cliente.get('CODCLI','')}"
     )
 
     st.sidebar.write(
         f"Crédito: {cliente.get('CODCRE','')}"
-    )
-
-    st.sidebar.write(
-        f"Agencia: {cliente.get('AGENCIA','')}"
     )
