@@ -6,9 +6,9 @@ def render():
 
     st.subheader("🔍 Búsqueda de Cliente")
 
-    # ---------------------------------
-    # Validar base cargada
-    # ---------------------------------
+    # =====================================
+    # Validar Excel cargado
+    # =====================================
 
     if (
         "df_clientes" not in st.session_state
@@ -16,25 +16,57 @@ def render():
     ):
 
         st.warning(
-            "Primero debe cargar el Excel desde la pantalla principal."
+            "Primero debe cargar el archivo Excel."
         )
 
         return
 
     df = st.session_state.df_clientes
 
-    # ---------------------------------
+    # =====================================
+    # Validar columnas disponibles
+    # =====================================
+
+    columnas_busqueda = []
+
+    posibles = [
+        "DOCPEN",
+        "CLIENTE",
+        "CODCLI",
+        "CODCRE",
+        "AGENCIA",
+        "ANALISTA"
+    ]
+
+    for col in posibles:
+
+        if col in df.columns:
+
+            columnas_busqueda.append(col)
+
+    if len(columnas_busqueda) == 0:
+
+        st.error(
+            "No se encontraron columnas válidas para búsqueda."
+        )
+
+        st.write(df.columns.tolist())
+
+        return
+
+    # =====================================
     # Inicializar resultados
-    # ---------------------------------
+    # =====================================
 
     if "resultado_busqueda" not in st.session_state:
+
         st.session_state.resultado_busqueda = pd.DataFrame()
 
-    # ---------------------------------
-    # Formulario de búsqueda
-    # ---------------------------------
+    # =====================================
+    # Formulario
+    # =====================================
 
-    with st.form("frm_busqueda"):
+    with st.form("form_busqueda"):
 
         col1, col2 = st.columns([1, 3])
 
@@ -42,28 +74,23 @@ def render():
 
             criterio = st.selectbox(
                 "Buscar por",
-                [
-                    "DOCPEN",
-                    "CLIENTE",
-                    "CODCLI",
-                    "CODCRE"
-                ]
+                columnas_busqueda
             )
 
         with col2:
 
             valor = st.text_input(
-                "Ingrese búsqueda"
+                "Ingrese valor"
             )
 
         buscar = st.form_submit_button(
-            "🔎 Buscar Cliente",
+            "🔎 Buscar",
             use_container_width=True
         )
 
-    # ---------------------------------
-    # Ejecutar búsqueda
-    # ---------------------------------
+    # =====================================
+    # Buscar
+    # =====================================
 
     if buscar:
 
@@ -77,42 +104,34 @@ def render():
 
             try:
 
-                if criterio not in df.columns:
-
-                    st.error(
-                        f"La columna '{criterio}' no existe en el Excel."
+                resultado = df[
+                    df[criterio]
+                    .astype(str)
+                    .fillna("")
+                    .str.contains(
+                        str(valor),
+                        case=False,
+                        na=False
                     )
+                ]
 
-                else:
-
-                    resultado = df[
-                        df[criterio]
-                        .astype(str)
-                        .fillna("")
-                        .str.contains(
-                            str(valor),
-                            case=False,
-                            na=False
-                        )
-                    ]
-
-                    st.session_state.resultado_busqueda = resultado
+                st.session_state.resultado_busqueda = resultado
 
             except Exception as e:
 
                 st.error(
-                    f"Error durante la búsqueda: {e}"
+                    f"Error en búsqueda: {e}"
                 )
 
-    # ---------------------------------
-    # Mostrar resultados
-    # ---------------------------------
+    # =====================================
+    # Resultados
+    # =====================================
 
     resultado = st.session_state.resultado_busqueda
 
     if not resultado.empty:
 
-        st.caption(
+        st.success(
             f"{len(resultado)} registro(s) encontrado(s)"
         )
 
@@ -121,42 +140,44 @@ def render():
             with st.container(border=True):
 
                 st.markdown(
-                    f"### {row.get('CLIENTE', '')}"
+                    f"### 👤 {row.get('CLIENTE','SIN NOMBRE')}"
                 )
 
                 c1, c2 = st.columns(2)
 
                 with c1:
 
+                    if "DOCPEN" in row.index:
+
+                        st.write(
+                            f"**Documento:** {row.get('DOCPEN','')}"
+                        )
+
                     st.write(
-                        f"**DNI:** {row.get('DOCPEN', '')}"
+                        f"**Código Cliente:** {row.get('CODCLI','')}"
                     )
 
                     st.write(
-                        f"**Código Cliente:** {row.get('CODCLI', '')}"
-                    )
-
-                    st.write(
-                        f"**Crédito:** {row.get('CODCRE', '')}"
+                        f"**Código Crédito:** {row.get('CODCRE','')}"
                     )
 
                 with c2:
 
                     st.write(
-                        f"**Agencia:** {row.get('AGENCIA', '')}"
+                        f"**Agencia:** {row.get('AGENCIA','')}"
                     )
 
                     st.write(
-                        f"**Saldo:** {row.get('SALDO_MN', '')}"
+                        f"**Saldo:** {row.get('SALDO_MN','')}"
                     )
 
                     st.write(
-                        f"**Estado:** {row.get('ESTADO_CREDITO', '')}"
+                        f"**Estado:** {row.get('ESTADO_CREDITO','')}"
                     )
 
                 if st.button(
                     "Seleccionar Cliente",
-                    key=f"cliente_{idx}"
+                    key=f"sel_{idx}"
                 ):
 
                     st.session_state.cliente_actual = (
@@ -164,7 +185,7 @@ def render():
                     )
 
                     st.success(
-                        f"Cliente seleccionado: {row.get('CLIENTE', '')}"
+                        "Cliente seleccionado correctamente."
                     )
 
                     st.rerun()
@@ -175,9 +196,9 @@ def render():
             "No se encontraron coincidencias."
         )
 
-    # ---------------------------------
-    # Cliente seleccionado
-    # ---------------------------------
+    # =====================================
+    # Cliente activo
+    # =====================================
 
     if st.session_state.get("cliente_actual"):
 
@@ -186,25 +207,36 @@ def render():
         st.divider()
 
         st.success(
-            f"Cliente activo: {cliente.get('CLIENTE', '')}"
+            f"Cliente activo: {cliente.get('CLIENTE','')}"
         )
 
-        col1, col2, col3 = st.columns(3)
+        c1, c2, c3 = st.columns(3)
 
-        with col1:
-            st.metric(
-                "DNI",
-                cliente.get("DOCPEN", "")
-            )
+        with c1:
 
-        with col2:
+            if "DOCPEN" in cliente:
+
+                st.metric(
+                    "Documento",
+                    cliente.get("DOCPEN", "")
+                )
+
+        with c2:
+
             st.metric(
-                "Cliente",
+                "Cod. Cliente",
                 cliente.get("CODCLI", "")
             )
 
-        with col3:
+        with c3:
+
             st.metric(
-                "Crédito",
+                "Cod. Crédito",
                 cliente.get("CODCRE", "")
             )
+
+        with st.expander(
+            "Ver información completa"
+        ):
+
+            st.json(cliente)
